@@ -1,6 +1,13 @@
 
 # Usage Explorer (bb-plugin-claude-usage)
 
+
+
+https://github.com/user-attachments/assets/19212484-8d32-43a5-babe-1175f62005d7
+
+
+
+
 <img width="2720" height="1800" alt="all-clear" src="https://github.com/user-attachments/assets/13ab5eba-d338-44aa-a640-2c7c403f12d3" />
 <img width="2720" height="1800" alt="models" src="https://github.com/user-attachments/assets/44e27181-5fb7-4418-81a5-f76f324afea4" />
 <img width="2720" height="1800" alt="providers" src="https://github.com/user-attachments/assets/937285fd-c7d9-404d-9051-a8962c5da507" />
