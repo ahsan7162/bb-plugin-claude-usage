@@ -1,6 +1,6 @@
-# bb-plugin-claude-usage
+# Usage Explorer (bb-plugin-claude-usage)
 
-A **Usage** page in bb: AI coding usage by session, day and model, plus Claude
+A **Usage Explorer** page in bb: AI coding usage by session, day and model, plus Claude
 plan limits with the pace you are spending them at.
 
 ```

@@ -1255,7 +1255,7 @@ function UsagePage() {
     <div className="h-full min-h-0 flex-1 overflow-y-auto">
       <div className={cn("mx-auto box-border w-full max-w-5xl space-y-10 px-4 pb-12 pt-4 md:px-8 md:pt-6", look === "allclear" && "cu-ac cu-groups")}>
         <header className="flex flex-wrap items-center gap-2">
-          <h1 className="mr-auto text-base font-medium text-foreground">Usage</h1>
+          <h1 className="mr-auto text-base font-medium text-foreground">Usage Explorer</h1>
           {agents.length > 0 ? (
             <ProviderPicker
               detected={agents}
@@ -1443,7 +1443,7 @@ export default definePluginApp((app) => {
   app.experimental_icons.register({ name: "claude-usage/gauge", component: GaugeIcon });
   app.slots.navPanel({
     id: "usage",
-    title: "Usage",
+    title: "Usage Explorer",
     icon: "claude-usage/gauge",
     path: "usage",
     component: UsagePage,

@@ -7,7 +7,7 @@
     "bbPluginSdk": ">=0.6.104"
   },
   "bb": {
-    "name": "Usage",
+    "name": "Usage Explorer",
     "description": "AI coding usage by session, day and model, read by ccusage from Claude Code, Codex, Gemini CLI and every other agent CLI it supports, with Claude plan limits and the pace you are spending them at.",
     "branding": {
       "icon": "./assets/icon.svg"
