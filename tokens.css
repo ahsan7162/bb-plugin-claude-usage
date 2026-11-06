@@ -26,9 +26,6 @@
   --cu-move-ease: cubic-bezier(0.2, 0, 0, 1);
   --cu-move: 280ms; /* numbers rolling, the trend line reshaping, a meter's value changing */
   --cu-draw: 480ms; /* the trend line drawing in when the days change */
-  --cu-meter: 420ms; /* a limit meter filling on arrival */
-  --cu-tick-delay: 300ms;
-  --cu-tick: 150ms; /* the pace tick landing after the fill */
   --cu-detail: 200ms; /* row details opening, the chevron turning, a tab's content */
   --cu-detail-out: 120ms;
   --cu-menu-in: 160ms;
@@ -73,27 +70,6 @@
 /* Crosshair, hover dot and tooltip glide between days. */
 .cu-cross {
   transition: transform var(--cu-cross) ease-out;
-}
-
-/* A limit meter: fills once on arrival, then moves to new values on the move curve.
-   clip-path keeps the rounded ends round at every width (scaleX would squash them). */
-@keyframes cu-meter-in {
-  from {
-    clip-path: inset(0 100% 0 0 round 999px);
-  }
-}
-.cu-meter {
-  animation: cu-meter-in var(--cu-meter) ease-out both;
-  transition: clip-path var(--cu-move) var(--cu-move-ease);
-}
-@keyframes cu-tick-in {
-  from {
-    opacity: 0;
-    transform: translateY(-3px);
-  }
-}
-.cu-tick {
-  animation: cu-tick-in var(--cu-tick) ease-out var(--cu-tick-delay) both;
 }
 
 /* Row details: fade down on open, fade out (opacity only) on close; the chevron turns. */
@@ -147,8 +123,6 @@
 @media (prefers-reduced-motion: reduce) {
   .cu-draw,
   .cu-draw-area,
-  .cu-meter,
-  .cu-tick,
   .cu-detail,
   .cu-detail[data-closing],
   .cu-tab,
@@ -157,7 +131,6 @@
     animation: none;
   }
   .cu-cross,
-  .cu-meter,
   .cu-chevron,
   .cu-hover {
     transition: none;
@@ -165,8 +138,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   "All clear" style (MASTER.md). Opt-in: everything below applies only inside
-   .cu-ac, so the classic style above is untouched and switching back is one click.
+   "All clear" layout (MASTER.md), scoped to .cu-ac, which the page root always carries.
    This file is plain CSS outside Tailwind's layers, so these rules win over utilities.
    --------------------------------------------------------------------------- */
 .cu-ac {
@@ -190,6 +162,11 @@
 }
 :root {
   --cu-line: var(--cu-accent);
+  /* Provider colours, used when more than one provider is on the page. */
+  --cu-p-claude: var(--cu-accent);
+  --cu-p-codex: #10a37f;
+  --cu-p-gemini: #4c8df6;
+  --cu-p-other: color-mix(in oklab, var(--foreground) 55%, var(--background));
   /* Cost-by-type bar colours. */
   --cu-t-input: var(--cu-m2);
   --cu-t-write: var(--cu-m1);

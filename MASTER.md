@@ -27,18 +27,26 @@ Classic's: the terracotta `--cu-accent` for the trend line, the terracotta heatm
 terracotta model ranks and Classic's cost-by-type colours. "Monochrome" in the visual thesis now
 means the surfaces and text only. Amber and red stay as the state washes.
 
+**Classic retired (user, 2026-11-06):** with Classic's colours moved into All clear, the Classic
+layout and its style switch were removed before the first release. All clear is the only layout.
+
+**Provider colours (user, 2026-11-06):** with more than one provider on the page, each has its
+own colour: `--cu-p-claude` (the terracotta accent), `--cu-p-codex` `#10A37F`, `--cu-p-gemini`
+`#4C8DF6`, `--cu-p-other` (ink at 55%). The daily chart draws one line per provider with a legend,
+and every model bar, dot and share line uses its provider's colour, at 100%, 62% and 38% for the
+provider's first, second and later models. With one provider, models keep `--cu-m0..m3`.
+
 **Amendments at the design-system gate (user):** the window tiles keep the classic projection
 line ("On pace to use 26% before it resets") and the Session tile keeps the block cost; model
-bars keep `--cu-m0..m3`. All clear ships as an opt-in style next to Classic (header switch,
-remembered per browser), so the user can switch back at any time.
+bars keep `--cu-m0..m3`. (All clear first shipped as an opt-in style next to Classic; see "Classic retired".)
 
 **Mode:** redesign of the page's visual layer, inside bb's rules: the ground, ink, muted text
 and overlay colours stay bb's tokens, so the page follows the user's bb theme (light and dark).
 
 ## Where it lives
 
-`tokens.css` keeps the Classic tokens at `:root` and scopes every All clear token and rule under
-`.cu-ac`, which `app.tsx` sets on the page root when the style is All clear.
+`tokens.css` holds the base tokens at `:root` and the layout tokens and rules under `.cu-ac`, which
+the page root always carries.
 
 ## Colour
 

@@ -1,6 +1,6 @@
 ## What you get
 
-- **Your plan limits first.** The session (5-hour) and weekly windows, plus any per-model weekly
+- **Your plan limits first.** A calm page that only turns amber or red when a window needs you. The session (5-hour) and weekly windows, plus any per-model weekly
   window your plan has: % left, when each resets, and where you will land at the current pace
   ("On pace to use 31% before it resets", or how long until the limit is hit). A plain verdict
   tells you whether there is room for a big task now, or whether to ease off for the rest of
@@ -13,12 +13,12 @@
 - **Spend by model.** Each model's cost, share and tokens. Click a model to filter the whole
   page to it.
 - **Every agent CLI you use.** Pick one or several providers from the header (Claude Code,
-  Codex, Gemini CLI, OpenCode, Copilot CLI and the other CLIs ccusage reads). Providers with
-  no usage in the range are listed, and your choice is remembered.
+  Codex, Gemini CLI, OpenCode, Copilot CLI and the other CLIs ccusage reads). With several on,
+  each provider gets its own colour: one line per provider on the daily chart, and its models in
+  that colour in every breakdown. Providers with no usage in the range are listed, and your
+  choice is remembered.
 - **Totals that add up.** Processed, cached and uncached input, output, and what caching saved,
   with the cost split into input, cache writes, cache reads and output.
-- **Two styles.** Classic, or All clear: a calmer, limits-first layout that only turns amber or
-  red when a window needs you. Switch any time from the header.
 
 ## How it works
 

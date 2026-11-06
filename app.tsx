@@ -70,6 +70,9 @@ function useHiddenAgents(): [Set<string>, (next: Set<string>) => void] {
   };
   return [hidden, save];
 }
+/** Each provider's own colour when several are on the page (tokens.css --cu-p-*). */
+const PROVIDER_COLORED = new Set(["claude", "codex", "gemini"]);
+const providerColor = (agent: string) => `var(--cu-p-${PROVIDER_COLORED.has(agent) ? agent : "other"})`;
 const agentName = (agent: string) => AGENT_LABEL[agent] ?? agent.charAt(0).toUpperCase() + agent.slice(1);
 const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
@@ -414,7 +417,7 @@ function ProviderPicker({ detected, shown, onChange, shareOf }: { detected: stri
               >
                 <span
                   className={cn("flex size-4 shrink-0 items-center justify-center rounded-[5px] border", on ? "border-transparent text-background" : "border-border")}
-                  style={on ? { background: "var(--cu-accent)" } : undefined}
+                  style={on ? { background: providerColor(a) } : undefined}
                   aria-hidden
                 >
                   <Menu.ItemIndicator>
@@ -447,112 +450,7 @@ function ProviderPicker({ detected, shown, onChange, shareOf }: { detected: stri
   );
 }
 
-// ---- limits -----------------------------------------------------------------
-
-function LimitMeter({ w, now, burn }: { w: Window; now: number; burn: Limits["burn"] }) {
-  const resetAt = w.resetsAt ? Date.parse(w.resetsAt) : NaN;
-  const left = Number.isFinite(resetAt) ? resetAt - now : null;
-  const elapsed = left !== null ? w.windowMs - left : null;
-  const pace = elapsed !== null ? Math.min(1, Math.max(0, elapsed / w.windowMs)) : null;
-  const used = Math.min(100, w.usedPercent);
-  const projection = elapsed !== null ? projectWindow(w.usedPercent, elapsed, w.windowMs) : null;
-  const ahead = pace !== null && used / 100 > pace + 0.02;
-  let note: string;
-  if (w.usedPercent >= 100) note = left !== null ? `Limit reached. Back in ${fmtDuration(left)}.` : "Limit reached.";
-  else if (projection?.fullInMs != null) note = `At this pace the limit is hit in ${fmtDuration(projection.fullInMs)}.`;
-  else if (projection) note = `On pace to use ${Math.round(Math.min(100, projection.atReset))}% before it resets.`;
-  else note = "No reset time reported.";
-  return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs text-muted-foreground">{w.label}</span>
-        {left !== null ? (
-          <span className="cu-num inline-flex items-center gap-1 text-xs text-muted-foreground" title={new Date(resetAt).toLocaleString()}>
-            <Icon name="Clock" className="size-3" />
-            {fmtDuration(left)}
-          </span>
-        ) : null}
-      </div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="cu-num text-3xl font-semibold tracking-tight text-foreground">
-          <Rolling value={Math.max(0, 100 - w.usedPercent)} format={(v) => `${Math.round(v)}%`} />
-        </span>
-        <span className="text-xs text-muted-foreground">left</span>
-      </div>
-      <div
-        className="relative h-2 rounded-full bg-muted"
-        role="meter"
-        aria-label={`${w.label} used`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(used)}
-      >
-        <div
-          className="cu-meter absolute inset-0 rounded-full"
-          style={{ clipPath: `inset(0 ${100 - used}% 0 0 round 999px)`, background: w.usedPercent >= 100 ? "var(--destructive, var(--cu-accent))" : "var(--cu-accent)" }}
-        />
-        {pace !== null ? (
-          <div
-            className="cu-tick absolute -top-1 -bottom-1 w-0.5 rounded-full bg-foreground"
-            style={{ left: `calc(${pace * 100}% - 1px)` }}
-            title={`Even pace: ${Math.round(pace * 100)}% of the window has passed`}
-          />
-        ) : null}
-      </div>
-      <p className={cn("text-xs", ahead ? "text-foreground" : "text-muted-foreground")}>{note}</p>
-      {w.kind === "five-hour" && burn ? (
-        <p className="cu-num text-xs text-muted-foreground">
-          {usd.format(burn.costPerHour)}/h now, {fmtCost(burn.blockCost)} so far this block
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function LimitsSection({ limits, error, now }: { limits: Limits | null; error: string | null; now: number }) {
-  if (error) return <Notice tone="error">Limits could not be read: {error}</Notice>;
-  if (!limits)
-    return (
-      <div className="grid gap-3 md:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-36 rounded-xl" />
-        ))}
-      </div>
-    );
-  if (limits.windows.length === 0) return <Notice>Plan limits are unavailable: {limits.error ?? "no windows reported"}.</Notice>;
-  return (
-    <div className={cn("grid gap-3", limits.windows.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2")}>
-      {limits.windows.map((w) => (
-        <LimitMeter key={w.label} w={w} now={now} burn={limits.burn} />
-      ))}
-    </div>
-  );
-}
-
-// ---- All clear: the limits-first top (MASTER.md) ----------------------------------
-
-type Look = "classic" | "allclear";
-const LOOK_KEY = "claude-usage:look";
-
-/** The page style, kept across reloads. Classic stays the default; All clear is opt-in. */
-function useLook(): [Look, (next: Look) => void] {
-  const [look, setLook] = useState<Look>(() => {
-    try {
-      return localStorage.getItem(LOOK_KEY) === "allclear" ? "allclear" : "classic";
-    } catch {
-      return "classic";
-    }
-  });
-  const save = (next: Look) => {
-    setLook(next);
-    try {
-      localStorage.setItem(LOOK_KEY, next);
-    } catch {
-      // storage blocked: the choice holds for this visit
-    }
-  };
-  return [look, save];
-}
+// ---- limits: the limits-first top (MASTER.md) ----------------------------------
 
 type WindowRead = {
   w: Window;
@@ -727,25 +625,32 @@ function niceStep(raw: number): number {
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
 }
 
-type Point = { date: string; value: number; top: string | null };
+type Point = { date: string; value: number; top: string | null; by: Record<string, number> };
+type Series = { agent: string; color: string };
 
-function TrendChart({ points, metric }: { points: Point[]; metric: Metric }) {
+/** One line for the total, or one line per provider when `series` holds several. */
+function TrendChart({ points, metric, series }: { points: Point[]; metric: Metric; series: Series[] }) {
+  const multi = series.length > 1;
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
   const height = 220;
   const pad = { top: 12, right: 8, bottom: 24, left: 52 };
   const innerW = Math.max(0, width - pad.left - pad.right);
   const innerH = height - pad.top - pad.bottom;
-  const max = Math.max(0, ...points.map((p) => p.value));
+  const max = Math.max(0, ...(multi ? points.flatMap((p) => series.map((s) => p.by[s.agent] ?? 0)) : points.map((p) => p.value)));
   const step = niceStep(max / 3);
   const top = Math.max(step * 3, step);
   const x = (i: number) => pad.left + (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
   const y = (v: number) => pad.top + innerH - (v / top) * innerH;
   // Same days: the line reshapes from its old positions. New days: it draws in (drawKey).
   const drawKey = `${points.length}:${points[0]?.date ?? ""}`;
-  const ys = useTween(points.map((p) => y(p.value)), `${drawKey}:${width}`);
-  const pts = points.map((_, i) => [x(i), ys[i] ?? y(points[i]!.value)] as [number, number]);
-  const line = monotonePath(pts);
+  const valuesOf = (s: Series | null) => points.map((p) => (s ? (p.by[s.agent] ?? 0) : p.value));
+  const lines = multi ? series : [null];
+  const target = lines.flatMap((s) => valuesOf(s).map(y));
+  const ys = useTween(target, `${drawKey}:${width}:${series.map((s) => s.agent).join(",")}`);
+  const pathOf = (k: number) => monotonePath(points.map((_, i) => [x(i), ys[k * points.length + i] ?? target[k * points.length + i]!] as [number, number]));
+  const line = pathOf(0);
+  const pts = points.map((_, i) => [x(i), ys[i] ?? target[i]!] as [number, number]);
   const area = pts.length > 1 ? `${line}L${pts[pts.length - 1]![0]},${pad.top + innerH}L${pts[0]![0]},${pad.top + innerH}Z` : "";
   const ticks = [0, 1, 2, 3].map((i) => i * step);
   const labelAt = points.length > 2 ? [0, Math.floor((points.length - 1) / 2), points.length - 1] : points.map((_, i) => i);
@@ -785,14 +690,36 @@ function TrendChart({ points, metric }: { points: Point[]; metric: Metric }) {
               {dayLabel(points[i]!.date, false)}
             </text>
           ))}
-          <g key={drawKey}>
-            {area ? <path d={area} fill="url(#cu-area)" className="cu-draw-area" /> : null}
-            <path d={line} pathLength={1} fill="none" strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" className="cu-draw" style={{ stroke: "var(--cu-line)" }} />
+          <g key={`${drawKey}:${multi}`}>
+            {!multi && area ? <path d={area} fill="url(#cu-area)" className="cu-draw-area" /> : null}
+            {lines.map((s, k) => (
+              <path
+                key={s?.agent ?? "total"}
+                d={pathOf(k)}
+                pathLength={1}
+                fill="none"
+                strokeWidth={1.75}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                className="cu-draw"
+                style={{ stroke: s ? s.color : "var(--cu-line)" }}
+              />
+            ))}
           </g>
           {h && hover !== null ? (
             <g pointerEvents="none">
               <line x1={0} x2={0} y1={pad.top} y2={pad.top + innerH} className="cu-cross stroke-foreground/30" strokeWidth={1} style={{ transform: `translateX(${x(hover)}px)` }} />
-              <circle cx={0} cy={0} r={4} className="cu-cross fill-background" strokeWidth={2} style={{ stroke: "var(--cu-line)", transform: `translate(${x(hover)}px, ${y(h.value)}px)` }} />
+              {lines.map((s) => (
+                <circle
+                  key={s?.agent ?? "total"}
+                  cx={0}
+                  cy={0}
+                  r={4}
+                  className="cu-cross fill-background"
+                  strokeWidth={2}
+                  style={{ stroke: s ? s.color : "var(--cu-line)", transform: `translate(${x(hover)}px, ${y(s ? (h.by[s.agent] ?? 0) : h.value)}px)` }}
+                />
+              ))}
             </g>
           ) : null}
         </svg>
@@ -804,7 +731,17 @@ function TrendChart({ points, metric }: { points: Point[]; metric: Metric }) {
         >
           <div className="text-muted-foreground">{dayLabel(h.date)}</div>
           <div className="cu-num text-sm font-medium text-foreground">{fmtMetric(metric, h.value)}</div>
-          {h.top ? <div className="truncate text-muted-foreground">Mostly {h.top}</div> : null}
+          {multi
+            ? series.map((s) => (
+                <div key={s.agent} className="flex items-center gap-1.5 text-muted-foreground">
+                  <span className="size-2 rounded-full" style={{ background: s.color }} aria-hidden />
+                  <span className="flex-1">{agentName(s.agent)}</span>
+                  <span className="cu-num text-foreground">{fmtMetric(metric, h.by[s.agent] ?? 0)}</span>
+                </div>
+              ))
+            : h.top
+              ? <div className="truncate text-muted-foreground">Mostly {h.top}</div>
+              : null}
         </div>
       ) : null}
     </div>
@@ -1021,7 +958,12 @@ function SessionsList({ sessions, metric, colorOf, partsOf }: { sessions: Sessio
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                     {s.project ? <span className="truncate">{s.project}</span> : null}
                     {s.lastActivity ? <span>{ago(s.lastActivity)}</span> : null}
-                    {s.agent !== "claude" ? <span className="rounded border border-border px-1">{agentName(s.agent)}</span> : null}
+                    {s.agent !== "claude" ? (
+                      <span className="inline-flex items-center gap-1 rounded border border-border px-1">
+                        <span className="size-1.5 rounded-full" style={{ background: providerColor(s.agent) }} aria-hidden />
+                        {agentName(s.agent)}
+                      </span>
+                    ) : null}
                   </div>
                   <StackBar parts={parts} metric={metric} colorOf={colorOf} share={max > 0 ? valueOf(metric, t) / max : 0} />
                 </>
@@ -1176,7 +1118,6 @@ function UsagePage() {
   const [metric, setMetric] = useState<Metric>(remembered.metric);
   const [tab, setTab] = useState<Tab>(remembered.tab);
   const [hiddenAgents, setHiddenAgents] = useHiddenAgents();
-  const [look, setLook] = useLook();
   const [model, setModel] = useState<string | null>(null);
   const [focusDay, setFocusDay] = useState<string | null>(null);
   const { report, reportRange, error, loading, reload } = useReport(range);
@@ -1211,10 +1152,29 @@ function UsagePage() {
     for (const s of report?.sessions ?? []) for (const p of byAgent(s.parts)) map.set(p.model, addPart(map.get(p.model) ?? emptyTotals(), p));
     return [...map].sort((a, b) => valueOf(metric, b[1]) - valueOf(metric, a[1]));
   }, [report, byAgent, metric]);
+  const multi = shownAgents.length > 1;
+  // One provider: models in the terracotta rank steps. Several: each model in its provider's
+  // colour, lighter for the provider's second and third models.
   const colorOf = useMemo(() => {
     const rank = new Map(models.map(([m], i) => [m, i]));
-    return (m: string) => `var(--cu-m${Math.min(3, rank.get(m) ?? 3)})`;
-  }, [models]);
+    if (!multi) return (m: string) => `var(--cu-m${Math.min(3, rank.get(m) ?? 3)})`;
+    const agentOf = new Map<string, string>();
+    for (const se of report?.sessions ?? []) for (const p of se.parts) if (!agentOf.has(p.model)) agentOf.set(p.model, p.agent);
+    const step = new Map<string, number>();
+    const seen = new Map<string, number>();
+    for (const [m] of models) {
+      const a = agentOf.get(m) ?? "other";
+      step.set(m, seen.get(a) ?? 0);
+      seen.set(a, (seen.get(a) ?? 0) + 1);
+    }
+    const mix = [100, 62, 38];
+    return (m: string) => {
+      const c = providerColor(agentOf.get(m) ?? "other");
+      const k = mix[Math.min(2, step.get(m) ?? 2)]!;
+      return k === 100 ? c : `color-mix(in oklab, ${c} ${k}%, var(--background))`;
+    };
+  }, [models, multi, report]);
+  const series: Series[] = multi ? shownAgents.map((a) => ({ agent: a, color: providerColor(a) })) : [];
 
   const sessionParts = useMemo(() => (report?.sessions ?? []).map((s) => partsOf(s.parts)), [report, partsOf]);
   const totals = useMemo(() => totalOf(sessionParts.flat()), [sessionParts]);
@@ -1236,7 +1196,9 @@ function UsagePage() {
         const byModel = new Map<string, number>();
         for (const p of d.parts) byModel.set(p.model, (byModel.get(p.model) ?? 0) + (metric === "cost" ? p.cost : tokensOf(p)));
         const top = [...byModel].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-        return { date: d.date, value: valueOf(metric, t), top };
+        const by: Record<string, number> = {};
+        for (const p of d.parts) by[p.agent] = (by[p.agent] ?? 0) + (metric === "cost" ? p.cost : tokensOf(p));
+        return { date: d.date, value: valueOf(metric, t), top, by };
       }),
     [days, metric],
   );
@@ -1253,7 +1215,7 @@ function UsagePage() {
 
   return (
     <div className="h-full min-h-0 flex-1 overflow-y-auto">
-      <div className={cn("mx-auto box-border w-full max-w-5xl space-y-10 px-4 pb-12 pt-4 md:px-8 md:pt-6", look === "allclear" && "cu-ac cu-groups")}>
+      <div className="cu-ac cu-groups mx-auto box-border w-full max-w-5xl space-y-10 px-4 pb-12 pt-4 md:px-8 md:pt-6">
         <header className="flex flex-wrap items-center gap-2">
           <h1 className="mr-auto text-base font-medium text-foreground">Usage Explorer</h1>
           {agents.length > 0 ? (
@@ -1280,15 +1242,6 @@ function UsagePage() {
               { value: "tokens", label: "Tokens" },
             ]}
           />
-          <Segmented
-            label="Style"
-            value={look}
-            onChange={setLook}
-            options={[
-              { value: "classic", label: "Classic" },
-              { value: "allclear", label: "All clear" },
-            ]}
-          />
           <Button
             variant="ghost"
             size="icon"
@@ -1303,14 +1256,7 @@ function UsagePage() {
           </Button>
         </header>
 
-        {look === "allclear" ? (
-          <AllClearTop limits={limits.limits} error={limits.error} now={now} glance={glance} />
-        ) : (
-          <section aria-label="Plan limits">
-            <SectionTitle aside={limits.limits?.plan ? <span className="text-xs text-muted-foreground">Claude {limits.limits.plan}</span> : null}>Claude limits</SectionTitle>
-            <LimitsSection limits={limits.limits} error={limits.error} now={now} />
-          </section>
-        )}
+        <AllClearTop limits={limits.limits} error={limits.error} now={now} glance={glance} />
 
         {error && !report ? (
           <Notice
@@ -1328,12 +1274,12 @@ function UsagePage() {
         ) : report.sessions.length === 0 ? (
           <Notice>No usage in {RANGE_LABEL[reportRange].toLowerCase()}. ccusage reads local logs from Claude Code, Codex, Gemini CLI, OpenCode and the other agent CLIs it supports.</Notice>
         ) : (
-          <div className={cn("space-y-10", look === "allclear" && "cu-groups")}>
+          <div className="cu-groups space-y-10">
 
             <section aria-label="Overview" className="grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
               <div className="min-w-0 space-y-4">
                 <div>
-                  <div className={cn("cu-num text-4xl font-semibold tracking-tight text-foreground md:text-5xl", look === "allclear" && "text-[40px] font-bold tracking-[-0.03em] md:text-[40px]")}>
+                  <div className="cu-num text-[40px] font-bold tracking-[-0.03em] text-foreground">
                     <Rolling value={hero} unit={metric} format={(v) => fmtMetric(metric, v)} />
                   </div>
                   <div className="mt-1 text-sm text-muted-foreground">
@@ -1356,7 +1302,10 @@ function UsagePage() {
                     const t = totalOf(report.sessions.filter((s) => s.agent === a).flatMap((s) => partsOf(s.parts)));
                     return (
                       <li key={a} className="flex items-baseline justify-between gap-3 text-sm">
-                        <span className="text-foreground">{agentName(a)}</span>
+                        <span className="flex items-center gap-2 text-foreground">
+                          {multi ? <span className="size-2 rounded-full" style={{ background: providerColor(a) }} aria-hidden /> : null}
+                          {agentName(a)}
+                        </span>
                         <span className="cu-num text-muted-foreground">
                           {hero > 0 ? pct1.format(valueOf(metric, t) / hero) : "0%"} of {metric}
                         </span>
@@ -1370,8 +1319,16 @@ function UsagePage() {
                 </p>
               </div>
               <div className="min-w-0">
-                <div className="mb-2 text-sm text-foreground">{metric === "cost" ? "Daily cost" : "Daily tokens"}</div>
-                {points.length > 1 ? <TrendChart points={points} metric={metric} /> : <Notice>One day in range. Pick a longer range to see the trend.</Notice>}
+                <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-foreground">
+                  <span className="mr-auto">{metric === "cost" ? "Daily cost" : "Daily tokens"}</span>
+                  {series.map((se) => (
+                    <span key={se.agent} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="h-0.5 w-3 rounded-full" style={{ background: se.color }} aria-hidden />
+                      {agentName(se.agent)}
+                    </span>
+                  ))}
+                </div>
+                {points.length > 1 ? <TrendChart points={points} metric={metric} series={series} /> : <Notice>One day in range. Pick a longer range to see the trend.</Notice>}
               </div>
             </section>
 
