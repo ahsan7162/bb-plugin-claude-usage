@@ -1,0 +1,8 @@
+dist/
+node_modules/
+.claude/
+# Media never enters git: bb clones this repo (every branch and tag) on every install. README media is a GitHub attachment.
+*.mp4
+*.mov
+*.webm
+*.gif

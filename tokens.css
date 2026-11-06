@@ -1,0 +1,306 @@
+/* Claude usage design tokens. bb's build copies this file as plain CSS (not run
+   through Tailwind), so tokens are CSS variables read from style props or
+   Tailwind arbitrary values. Surfaces and text stay bb's; the one colour the
+   plugin owns is Claude's terracotta, the tint bb's own Claude provider uses,
+   and it is kept for data ink. */
+:root {
+  --cu-accent: #d97757;
+  /* Small accent text, pulled toward bb's foreground so it passes 4.5:1 in both themes. */
+  --cu-accent-text: color-mix(in oklab, #d97757 70%, var(--foreground));
+
+  /* Model ranks: the top model in the accent, the rest in steps toward the ground. */
+  --cu-m0: var(--cu-accent);
+  --cu-m1: color-mix(in oklab, var(--cu-accent) 45%, var(--background));
+  --cu-m2: color-mix(in oklab, var(--foreground) 48%, var(--background));
+  --cu-m3: color-mix(in oklab, var(--foreground) 22%, var(--background));
+
+  /* Heatmap steps, empty to full. */
+  --cu-h0: color-mix(in oklab, var(--foreground) 7%, var(--background));
+  --cu-h1: color-mix(in oklab, var(--cu-accent) 28%, var(--background));
+  --cu-h2: color-mix(in oklab, var(--cu-accent) 52%, var(--background));
+  --cu-h3: color-mix(in oklab, var(--cu-accent) 76%, var(--background));
+  --cu-h4: var(--cu-accent);
+
+  /* Motion, from the validated interaction thesis: figures move only to show what changed.
+     The JS tweens in app.tsx (MOVE_MS, moveEase) carry the same two values. */
+  --cu-move-ease: cubic-bezier(0.2, 0, 0, 1);
+  --cu-move: 280ms; /* numbers rolling, the trend line reshaping, a meter's value changing */
+  --cu-draw: 480ms; /* the trend line drawing in when the days change */
+  --cu-meter: 420ms; /* a limit meter filling on arrival */
+  --cu-tick-delay: 300ms;
+  --cu-tick: 150ms; /* the pace tick landing after the fill */
+  --cu-detail: 200ms; /* row details opening, the chevron turning, a tab's content */
+  --cu-detail-out: 120ms;
+  --cu-menu-in: 160ms;
+  --cu-menu-out: 120ms;
+  --cu-cross: 90ms; /* the chart crosshair and its tooltip following the pointer */
+  --cu-hover: 120ms;
+}
+
+.cu-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hover and press feedback on controls. */
+.cu-hover {
+  transition-property: color, background-color, border-color, transform;
+  transition-duration: var(--cu-hover);
+  transition-timing-function: ease-out;
+}
+
+/* The trend line drawing itself left to right: time reads in that direction. */
+@keyframes cu-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.cu-draw {
+  stroke-dasharray: 1;
+  animation: cu-draw var(--cu-draw) var(--cu-move-ease) both;
+}
+@keyframes cu-fade {
+  from {
+    opacity: 0;
+  }
+}
+.cu-draw-area {
+  animation: cu-fade var(--cu-draw) ease-out both;
+}
+
+/* Crosshair, hover dot and tooltip glide between days. */
+.cu-cross {
+  transition: transform var(--cu-cross) ease-out;
+}
+
+/* A limit meter: fills once on arrival, then moves to new values on the move curve.
+   clip-path keeps the rounded ends round at every width (scaleX would squash them). */
+@keyframes cu-meter-in {
+  from {
+    clip-path: inset(0 100% 0 0 round 999px);
+  }
+}
+.cu-meter {
+  animation: cu-meter-in var(--cu-meter) ease-out both;
+  transition: clip-path var(--cu-move) var(--cu-move-ease);
+}
+@keyframes cu-tick-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+.cu-tick {
+  animation: cu-tick-in var(--cu-tick) ease-out var(--cu-tick-delay) both;
+}
+
+/* Row details: fade down on open, fade out (opacity only) on close; the chevron turns. */
+@keyframes cu-detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes cu-detail-out {
+  to {
+    opacity: 0;
+  }
+}
+.cu-detail {
+  animation: cu-detail-in var(--cu-detail) ease-out both;
+}
+.cu-detail[data-closing] {
+  animation: cu-detail-out var(--cu-detail-out) ease-in both;
+}
+.cu-chevron {
+  transition: transform var(--cu-detail) var(--cu-move-ease);
+}
+.cu-tab {
+  animation: cu-fade var(--cu-detail) ease-out both;
+}
+
+/* The provider menu: Radix keeps it mounted until the closing animation ends. */
+@keyframes cu-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes cu-menu-out {
+  to {
+    opacity: 0;
+  }
+}
+.cu-menu {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+}
+.cu-menu[data-state="open"] {
+  animation: cu-menu-in var(--cu-menu-in) ease-out both;
+}
+.cu-menu[data-state="closed"] {
+  animation: cu-menu-out var(--cu-menu-out) ease-in both;
+}
+
+/* Reduced motion: every change is instant. The JS tweens read the same media query. */
+@media (prefers-reduced-motion: reduce) {
+  .cu-draw,
+  .cu-draw-area,
+  .cu-meter,
+  .cu-tick,
+  .cu-detail,
+  .cu-detail[data-closing],
+  .cu-tab,
+  .cu-menu[data-state="open"],
+  .cu-menu[data-state="closed"] {
+    animation: none;
+  }
+  .cu-cross,
+  .cu-meter,
+  .cu-chevron,
+  .cu-hover {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   "All clear" style (MASTER.md). Opt-in: everything below applies only inside
+   .cu-ac, so the classic style above is untouched and switching back is one click.
+   This file is plain CSS outside Tailwind's layers, so these rules win over utilities.
+   --------------------------------------------------------------------------- */
+.cu-ac {
+  --cu-tile: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --cu-tile-hover: color-mix(in oklab, var(--foreground) 9%, transparent);
+  --cu-tight: #f2b33d;
+  --cu-out: #f0524f;
+  --cu-tight-wash: color-mix(in oklab, var(--cu-tight) 22%, transparent);
+  --cu-out-wash: color-mix(in oklab, var(--cu-out) 22%, transparent);
+  /* State text on the plain ground only; text on a wash stays bb ink (MASTER.md, contrast). */
+  --cu-tight-ink: color-mix(in oklab, var(--cu-tight) 45%, var(--foreground));
+  --cu-out-ink: color-mix(in oklab, var(--cu-out) 70%, var(--foreground));
+  /* Data colour is Classic's terracotta palette (the user's choice): the trend line,
+     heatmap, model bars and cost-by-type bar inherit --cu-line, --cu-h*, --cu-m* and --cu-t*. */
+  --cu-r-tile: 28px;
+  --cu-r-row: 16px;
+  --cu-calm: 300ms;
+  --cu-chip: 200ms;
+  --cu-draw: 300ms;
+  --cu-hover: var(--cu-chip);
+}
+:root {
+  --cu-line: var(--cu-accent);
+  /* Cost-by-type bar colours. */
+  --cu-t-input: var(--cu-m2);
+  --cu-t-write: var(--cu-m1);
+  --cu-t-read: var(--cu-m3);
+  --cu-t-output: var(--cu-m0);
+}
+
+/* Groups 48px apart. */
+.cu-ac .cu-groups > * + * {
+  margin-top: 48px;
+}
+
+/* Pills: segmented controls, the provider button, the search field, chips. */
+.cu-ac .cu-seg {
+  border-radius: 9999px;
+  background: var(--cu-tile);
+}
+.cu-ac .cu-seg > button {
+  border-radius: 9999px;
+}
+.cu-ac .cu-pill {
+  border-radius: 9999px;
+  border-color: transparent;
+  background: var(--cu-tile);
+  transition: background-color var(--cu-chip) ease-out;
+}
+.cu-ac .cu-pill:hover {
+  background: var(--cu-tile-hover);
+}
+
+/* Lists: no borders, no cards; rows are 16px tiles that tint on hover and while open. */
+.cu-ac .cu-list {
+  border-width: 0;
+  background: transparent;
+  overflow: visible;
+}
+.cu-ac .cu-list > * {
+  border-width: 0;
+  border-radius: var(--cu-r-row);
+}
+.cu-ac .cu-list > * + * {
+  margin-top: 4px;
+}
+.cu-ac .cu-list > li > button {
+  border-radius: var(--cu-r-row);
+  transition: background-color var(--cu-chip) ease-out;
+}
+.cu-ac .cu-list > li > button:hover {
+  background: var(--cu-tile-hover);
+}
+.cu-ac .cu-list-head {
+  border-bottom-width: 0;
+}
+.cu-ac .cu-open {
+  background: var(--cu-tile);
+}
+.cu-ac .cu-panel {
+  border-width: 0;
+  border-radius: var(--cu-r-row);
+  background: var(--cu-tile);
+}
+
+/* Window tiles. */
+.cu-tile {
+  border-radius: var(--cu-r-tile);
+  background: var(--cu-tile);
+}
+.cu-tile[data-state="tight"] {
+  background: var(--cu-tight-wash);
+}
+.cu-tile[data-state="out"] {
+  background: var(--cu-out-wash);
+}
+/* A window turning tight: its wash fades in with one 2px nudge, once. */
+@keyframes cu-wash {
+  0% {
+    opacity: 0.4;
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.cu-wash {
+  animation: cu-wash var(--cu-calm) ease-out both;
+}
+/* The status sentence fades in when it changes. */
+.cu-status {
+  animation: cu-fade var(--cu-calm) ease-out both;
+}
+.cu-chip {
+  border-radius: 9999px;
+  background: var(--cu-tile);
+  transition: background-color var(--cu-chip) ease-out;
+}
+.cu-chip:hover {
+  background: var(--cu-tile-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cu-wash,
+  .cu-status {
+    animation: none;
+  }
+  .cu-chip,
+  .cu-ac .cu-pill,
+  .cu-ac .cu-list > li > button {
+    transition: none;
+  }
+}
