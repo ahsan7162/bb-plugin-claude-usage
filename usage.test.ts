@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { foldLine, lineOf, newState, titleOf } from "./sessions.ts";
 import {
   baseModel,
+  CCUSAGE_INTEGRITY,
+  CCUSAGE_VERSION,
   isTimeZone,
   planLabel,
   projectWindow,
@@ -146,4 +149,20 @@ test("a title survives a transcript read only by its two ends", () => {
   for (const line of [...wholeLines(head, false), ...wholeLines(tail, true)]) foldLine(state, lineOf(line));
   assert.equal(titleOf(state), "Login redirect fix");
   assert.equal(state.firstPrompt, "Fix the login redirect");
+});
+
+test("the pinned ccusage checksums are the ones package-lock.json installs", () => {
+  const lock = JSON.parse(readFileSync(new URL("./package-lock.json", import.meta.url), "utf8")) as {
+    packages: Record<string, { version?: string; integrity?: string }>;
+  };
+  const fromLock: Record<string, string> = {};
+  for (const [path, pkg] of Object.entries(lock.packages)) {
+    const m = /node_modules\/@ccusage\/ccusage-(.+)$/.exec(path);
+    if (m && pkg.integrity) {
+      assert.equal(pkg.version, CCUSAGE_VERSION, `${path} is ${pkg.version}`);
+      fromLock[m[1]!] = pkg.integrity;
+    }
+  }
+  assert.deepEqual(CCUSAGE_INTEGRITY, fromLock);
+  assert.equal(lock.packages["node_modules/ccusage"]?.version, CCUSAGE_VERSION);
 });

@@ -247,3 +247,16 @@ export function wholeLines(text: string, cutStart: boolean): string[] {
   lines.pop();
   return lines.filter((line) => line.trim() !== "");
 }
+
+/** The ccusage release this plugin runs; package.json pins the same version. */
+export const CCUSAGE_VERSION = "20.0.48";
+
+/** npm's sha512 integrity for each platform binary of ccusage 20.0.48, from package-lock.json. */
+export const CCUSAGE_INTEGRITY: Record<string, string> = {
+  "darwin-arm64": "sha512-5nF3wIFO6IfJsVI3mc0/8iZtcfN8TEN4Dw1JyhToPQVBLVoaxbnBpNR16RWLQvS1yNcVVQfjeCDblmHe/Wt6/A==",
+  "darwin-x64": "sha512-7P4dV2jPb3jyzfRncDyAyEnix50trmXYBnHxzhNzao69Rw4MEPGwlU5mkjwYX3/kTACQ5MDoomxHhFQ9Y8+Avg==",
+  "linux-arm64": "sha512-dSh53ih6BEZrHsk/Cywu7TEK2xF+NT266Dy+iarcqX/GF4/rhuNnukV4UZR+JgYZTbf1LGHGO8VDrELC//AP9w==",
+  "linux-x64": "sha512-ThF2FNVmn8TnzTl94ns980AM2kcMUKBp0zS3LybXlPTV7qeIEhG5U9WbqrpuWvnSOOMM6fEV2Mw1dFoDRLyE9w==",
+  "win32-arm64": "sha512-zwvHE6W/IelXp0/P2fNnZhH8FVJRicyOJJk/Q0XDqrIkzGlNPjStq316Nxz8ITVPGi2lpPVTi6Hn4mmP6OmEuA==",
+  "win32-x64": "sha512-4PCIs0BWmy3Mj8J93r0pX6XVAZpXQOYO4FxtgXrJnB0NJJ2jgGlsKEzwYPxZEc62Qq+ZKyyGB6c/6QnGw30LjQ==",
+};

@@ -36,7 +36,10 @@ bb plugin logs claude-usage
 ## Limits
 
 - ccusage ships as a native binary through npm optional dependencies (macOS, Linux and Windows,
-  arm64 and x64). If it is missing, the server falls back to `npx -y ccusage@20.0.48`.
+  arm64 and x64). bb's git installs omit optional dependencies, so there the server downloads the
+  binary for its platform once from registry.npmjs.org into the plugin's data folder, checks it
+  against the sha512 pinned in `usage.ts` (a test keeps it equal to `package-lock.json`), and
+  unpacks it with the system `tar`. If that fails, it falls back to `npx -y ccusage@20.0.48`.
 - Limits read Claude Code's own sign-in (macOS Keychain, then `~/.claude/.credentials.json`) on
   the server; the token is never sent to the page or logged, and never refreshed or written.
 - Costs are API list prices. They include the 2x price of 1-hour cache writes, so they run higher

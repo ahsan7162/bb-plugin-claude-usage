@@ -6,7 +6,9 @@
 // binary, caches the JSON, and adds what ccusage leaves out: Claude Code
 // session titles (from the transcript's two ends) and the plan's quota windows.
 import { execFile } from "node:child_process";
-import { open, readFile, readdir, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { constants as fsConstants } from "node:fs";
+import { access, chmod, mkdir, open, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -15,11 +17,10 @@ import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { rpcContract, type Session } from "./contract";
 import { foldLine, lineOf, newState, placeOf, titleOf } from "./sessions";
-import { isTimeZone, planLabel, readOauthUsage, readReport, sinceOf, wholeLines, type Range, type Window } from "./usage";
+import { CCUSAGE_INTEGRITY, CCUSAGE_VERSION, isTimeZone, planLabel, readOauthUsage, readReport, sinceOf, wholeLines, type Range, type Window } from "./usage";
 
 const run = promisify(execFile);
 
-const CCUSAGE_VERSION = "20.0.48";
 /** A report or limits reading this fresh is served without running anything. */
 const FRESH_MS = 60_000;
 /** Claude Code rewrites the session title every few turns, so the newest sits near the end. */
@@ -29,15 +30,45 @@ const TAIL_BYTES = 128 * 1024;
 type Report = z.infer<(typeof rpcContract)["report"]["output"]>;
 type Limits = z.infer<(typeof rpcContract)["limits"]["output"]>;
 
-/** The native ccusage binary installed with this plugin, or npx as a last resort. */
-function ccusageCommand(): { file: string; prefix: string[] } {
+type Command = { file: string; prefix: string[] };
+
+/**
+ * The native ccusage binary. bb's git installs run `npm install --omit=optional`, so the
+ * platform binary that npm would add as an optional dependency is missing there: it is then
+ * downloaded once from the npm registry into the plugin's data folder, checked against the
+ * pinned sha512 above, and unpacked with the system tar. npx is the last resort.
+ */
+async function ccusageCommand(dataDir: string, signal: AbortSignal): Promise<Command> {
+  const target = `${process.platform}-${process.arch}`;
   const exe = process.platform === "win32" ? "ccusage.exe" : "ccusage";
   try {
-    const pkg = createRequire(import.meta.url).resolve(`@ccusage/ccusage-${process.platform}-${process.arch}/package.json`);
-    return { file: join(dirname(pkg), "bin", exe), prefix: [] };
+    const pkg = createRequire(import.meta.url).resolve(`@ccusage/ccusage-${target}/package.json`);
+    const file = join(dirname(pkg), "bin", exe);
+    await access(file, fsConstants.X_OK);
+    return { file, prefix: [] };
   } catch {
-    return { file: "npx", prefix: ["-y", `ccusage@${CCUSAGE_VERSION}`] };
+    // not installed with the plugin (git install): fetch it below
   }
+  const integrity = CCUSAGE_INTEGRITY[target];
+  if (integrity) {
+    const dir = join(dataDir, `ccusage-${CCUSAGE_VERSION}-${target}`);
+    const file = join(dir, "package", "bin", exe);
+    if (await access(file, fsConstants.X_OK).then(() => true, () => false)) return { file, prefix: [] };
+    const name = `ccusage-${target}`;
+    const url = `https://registry.npmjs.org/@ccusage/${name}/-/${name}-${CCUSAGE_VERSION}.tgz`;
+    const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]) });
+    if (!response.ok) throw new Error(`Downloading ccusage failed: npm answered ${response.status}.`);
+    const body = Buffer.from(await response.arrayBuffer());
+    if (`sha512-${createHash("sha512").update(body).digest("base64")}` !== integrity) throw new Error("The downloaded ccusage did not match its pinned checksum.");
+    await mkdir(dir, { recursive: true });
+    const tgz = join(dir, `${name}.tgz`);
+    await writeFile(tgz, body);
+    await run("tar", ["-xzf", tgz, "-C", dir], { timeout: 60_000, signal });
+    await rm(tgz, { force: true });
+    if (process.platform !== "win32") await chmod(file, 0o755);
+    return { file, prefix: [] };
+  }
+  return { file: "npx", prefix: ["-y", `ccusage@${CCUSAGE_VERSION}`] };
 }
 
 async function ends(path: string, size: number): Promise<string[]> {
@@ -60,7 +91,14 @@ export default async function plugin(bb: BbPluginApi) {
   const claudeRoot = process.env.CLAUDE_CONFIG_DIR ?? join(home, ".claude");
   const stop = new AbortController();
   bb.onDispose(() => stop.abort());
-  const ccusage = ccusageCommand();
+  // The binary lives beside the plugin's own database, in its bb data folder.
+  const dataDir = dirname(bb.storage.database().name);
+  let command: Promise<Command> | null = null;
+  const ccusage = () => {
+    command ??= ccusageCommand(dataDir, stop.signal);
+    command.catch(() => (command = null)); // a failed download is retried on the next read
+    return command;
+  };
   // A bb launched from the Dock has a minimal PATH; npx (the fallback) lives in one of these.
   const env = { ...process.env, PATH: [process.env.PATH, "/opt/homebrew/bin", "/usr/local/bin"].filter(Boolean).join(":"), NO_COLOR: "1" };
 
@@ -68,7 +106,8 @@ export default async function plugin(bb: BbPluginApi) {
   let queue: Promise<unknown> = Promise.resolve();
   function ccusageJson(args: string[]): Promise<unknown> {
     const next = queue.then(async () => {
-      const { stdout } = await run(ccusage.file, [...ccusage.prefix, ...args, "--json", "--offline"], {
+      const cmd = await ccusage();
+      const { stdout } = await run(cmd.file, [...cmd.prefix, ...args, "--json", "--offline"], {
         env,
         maxBuffer: 256 * 1024 * 1024,
         timeout: 120_000,

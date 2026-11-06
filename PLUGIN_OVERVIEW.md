@@ -22,9 +22,10 @@
 
 ## How it works
 
-Usage comes from [ccusage](https://ccusage.com), pinned and installed with the plugin as its
-native binary, run offline: it reads the local logs your agent CLIs already write, so nothing
-about your usage leaves your machine. Costs are estimates at API list prices, including the
+Usage comes from [ccusage](https://ccusage.com), pinned to one release and run offline as its
+native binary: it reads the local logs your agent CLIs already write, so nothing about your usage
+leaves your machine. On first use the plugin downloads that binary once from the npm registry and
+checks it against a pinned checksum before running it. Costs are estimates at API list prices, including the
 higher price of one-hour cache writes.
 
 Plan limits come from Anthropic's usage endpoint, using the sign-in Claude Code already stored
