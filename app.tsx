@@ -758,7 +758,7 @@ function TypeBar({ totals, metric }: { totals: Totals; metric: Metric }) {
           { label: "Cache write", value: totals.split.cacheWrite, color: "var(--cu-t-write)" },
           { label: "Cache read", value: totals.split.cacheRead, color: "var(--cu-t-read)" },
           { label: "Output", value: totals.split.output, color: "var(--cu-t-output)" },
-          ...(totals.split.other > 0 ? [{ label: "Unpriced models", value: totals.split.other, color: "var(--muted-foreground)" }] : []),
+          ...(totals.split.other > 0 ? [{ label: "Other models, not split by type", value: totals.split.other, color: "var(--muted-foreground)" }] : []),
         ]
       : [
           { label: "Input", value: totals.input, color: "var(--cu-t-input)" },
