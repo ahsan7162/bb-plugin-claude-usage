@@ -2,12 +2,7 @@
 # Usage Explorer (bb-plugin-claude-usage)
 
 
-
-
-Uploading usage-explorer-every-agent.mp4…
-
-
-
+https://github.com/user-attachments/assets/1910b8e1-5d95-496b-bc28-e93370647904
 
 
 
