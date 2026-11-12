@@ -24,8 +24,8 @@
 
 Usage comes from [ccusage](https://ccusage.com), pinned to one release and run as its
 native binary: it reads the local logs your agent CLIs already write, so nothing about your usage
-leaves your machine. Prices come from LiteLLM's public price list, downloaded (never uploaded to)
-so new models are priced without a plugin update. On first use the plugin downloads that binary once from the npm registry and
+leaves your machine. Prices come from LiteLLM's public price list, which is only downloaded, so a
+newly released model is priced without a plugin update. On first use the plugin downloads that binary once from the npm registry and
 checks it against a pinned checksum before running it. Costs are estimates at API list prices, including the
 higher price of one-hour cache writes.
 
