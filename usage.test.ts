@@ -8,6 +8,7 @@ import {
   CCUSAGE_VERSION,
   isTimeZone,
   planLabel,
+  pricesOf,
   projectWindow,
   readOauthUsage,
   readReport,
@@ -73,6 +74,18 @@ test("splitCost prices input, cache reads and output, and gives cache writes the
   assert.ok(Math.abs(split.saved - 3.8) < 1e-9, "cache reads saved $4 - $0.20 per million");
   assert.equal(splitCost({ ...part, cost: 1 })!.cacheWrite, 0, "never below zero");
   assert.equal(splitCost({ ...part, model: "gpt-5.3-codex" }), null, "unknown model: no split");
+  assert.notEqual(splitCost({ ...part, model: "claude-fable-5-2" }), null, "Fable 5.2 is priced");
+});
+
+test("pricesOf reads LiteLLM per-token prices as $ per million, by base model", () => {
+  const list = {
+    "claude-new-9": { input_cost_per_token: 6e-6, output_cost_per_token: 3e-5, cache_read_input_token_cost: 1.5e-7 },
+    "no-cache-read": { input_cost_per_token: 1e-6, output_cost_per_token: 2e-6 },
+  };
+  const prices = pricesOf(list, ["claude-new-9[1m]", "claude-new-9-20261201", "no-cache-read", "unknown"]);
+  assert.deepEqual(Object.keys(prices), ["claude-new-9"]);
+  assert.ok(Math.abs(prices["claude-new-9"]!.input - 6) < 1e-9 && Math.abs(prices["claude-new-9"]!.cacheRead - 0.15) < 1e-9);
+  assert.deepEqual(pricesOf(null, ["claude-new-9"]), {}, "no list: nothing");
   assert.equal(baseModel("claude-haiku-4-5-20251001"), "claude-haiku-4-5");
   assert.equal(baseModel("claude-opus-5-5[1m]"), "claude-opus-5-5");
 });

@@ -28,9 +28,14 @@ bb plugin logs claude-usage
 ## Where the numbers come from
 
 - **Usage:** [ccusage](https://ccusage.com) `20.0.48`, pinned in `dependencies`, run as its
-  native binary with `--offline` (no network). It reads local logs from Claude Code, Codex,
+  native binary. It reads local logs from Claude Code, Codex,
   Gemini CLI, OpenCode and the other agent CLIs it supports; an agent filter appears once a
   second agent shows up. One run per range, cached for a minute, one run at a time.
+- **Prices:** [LiteLLM's price list](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json),
+  so models newer than the pinned ccusage are priced. ccusage fetches it for the totals (falling
+  back to its own copy offline); the server fetches it at most daily for the split by token type
+  (falling back to its last copy, then a built-in table in `usage.ts`). Only the list is
+  downloaded; nothing is sent.
 - **Session titles and projects** (Claude Code only): the first 64 KB and last 128 KB of each
   transcript, folded through `sessions.ts`.
 - **Limits:** Anthropic's `/api/oauth/usage` with Claude Code's own sign-in (macOS Keychain,

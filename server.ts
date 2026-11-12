@@ -17,7 +17,7 @@ import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { rpcContract, type Session } from "./contract";
 import { foldLine, lineOf, newState, placeOf, titleOf } from "./sessions";
-import { CCUSAGE_INTEGRITY, CCUSAGE_VERSION, isTimeZone, planLabel, readOauthUsage, readReport, sinceOf, wholeLines, type Range, type Window } from "./usage";
+import { CCUSAGE_INTEGRITY, CCUSAGE_VERSION, isTimeZone, planLabel, PRICE_LIST_URL, pricesOf, readOauthUsage, readReport, sinceOf, wholeLines, type Range, type Window } from "./usage";
 
 const run = promisify(execFile);
 
@@ -107,7 +107,8 @@ export default async function plugin(bb: BbPluginApi) {
   function ccusageJson(args: string[]): Promise<unknown> {
     const next = queue.then(async () => {
       const cmd = await ccusage();
-      const { stdout } = await run(cmd.file, [...cmd.prefix, ...args, "--json", "--offline"], {
+      // Online, so models newer than the pinned release are priced; ccusage caches the list and falls back to its own copy.
+      const { stdout } = await run(cmd.file, [...cmd.prefix, ...args, "--json"], {
         env,
         maxBuffer: 256 * 1024 * 1024,
         timeout: 120_000,
@@ -154,6 +155,30 @@ export default async function plugin(bb: BbPluginApi) {
     return meta;
   }
 
+  // LiteLLM's price list (about 4 MB), fetched at most daily into the data folder; a stale copy beats none.
+  const priceFile = join(dataDir, "litellm-prices.json");
+  let priceList: { at: number; value: Promise<unknown> } | null = null;
+  function prices(): Promise<unknown> {
+    if (priceList && Date.now() - priceList.at < 86_400_000) return priceList.value;
+    const value = (async () => {
+      const saved = await stat(priceFile).catch(() => null);
+      if (!saved || Date.now() - saved.mtimeMs > 86_400_000) {
+        try {
+          const response = await fetch(PRICE_LIST_URL, { signal: AbortSignal.any([stop.signal, AbortSignal.timeout(30_000)]) });
+          if (!response.ok) throw new Error(`LiteLLM answered ${response.status}`);
+          const text = await response.text();
+          JSON.parse(text); // only a whole list replaces the saved one
+          await writeFile(priceFile, text);
+        } catch (cause) {
+          bb.log.warn(`Refreshing model prices failed: ${String(cause)}`);
+        }
+      }
+      return JSON.parse(await readFile(priceFile, "utf8").catch(() => "{}")) as unknown;
+    })();
+    priceList = { at: Date.now(), value };
+    return value;
+  }
+
   const reports = new Map<string, { at: number; value: Promise<Report> }>();
   async function buildReport(range: Range, timeZone: string): Promise<Report> {
     const since = sinceOf(range, Date.now(), timeZone);
@@ -166,7 +191,8 @@ export default async function plugin(bb: BbPluginApi) {
       const meta = file ? await metaOf(s.id, file).catch(() => null) : null;
       enriched.push({ ...s, title: meta?.title ?? null, project: meta?.project ?? null, threadId: meta?.threadId ?? null });
     }
-    return { generatedAt: Date.now(), days, sessions: enriched };
+    const models = new Set([...days, ...sessions].flatMap((r) => r.parts.map((p) => p.model)));
+    return { generatedAt: Date.now(), days, sessions: enriched, prices: pricesOf(await prices().catch(() => ({})), models) };
   }
 
   // ---- Limits ----------------------------------------------------------------

@@ -3,16 +3,19 @@
 // No Node or bb imports.
 
 /** $ per million tokens at API list prices. */
-interface Price {
+export interface Price {
   input: number;
   output: number;
   cacheRead: number;
 }
 
-// From the claude-api skill's model table (cached 2026-10-06). Cache reads are
-// 0.1x input except Opus 5.5 (0.05x) and the Fable/Mythos 5.1 tier (0.025x).
+// Offline fallback for the live LiteLLM prices the server sends (`addPrices`),
+// from the claude-api skill's model table (cached 2026-11-03). Cache reads are
+// 0.1x input except Opus 5.5 (0.05x) and the Fable/Mythos 5.1 and 5.2 tiers (0.025x).
 // Only used to split a model's cost by token type; ccusage owns the totals.
 const PRICES: Record<string, Price> = {
+  "claude-fable-5-2": { input: 8, output: 40, cacheRead: 0.2 },
+  "claude-mythos-5-2": { input: 8, output: 40, cacheRead: 0.2 },
   "claude-fable-5-1": { input: 10, output: 50, cacheRead: 0.25 },
   "claude-mythos-5-1": { input: 10, output: 50, cacheRead: 0.25 },
   "claude-fable-5": { input: 10, output: 50, cacheRead: 1 },
@@ -21,12 +24,32 @@ const PRICES: Record<string, Price> = {
   "claude-opus-4-8": { input: 5, output: 25, cacheRead: 0.5 },
   "claude-opus-4-7": { input: 5, output: 25, cacheRead: 0.5 },
   "claude-opus-4-6": { input: 5, output: 25, cacheRead: 0.5 },
-  "claude-sonnet-5-5": { input: 2, output: 10, cacheRead: 0.2 },
+  "claude-sonnet-5-5": { input: 2, output: 10, cacheRead: 0.1 },
   "claude-sonnet-5": { input: 2, output: 10, cacheRead: 0.2 },
   "claude-sonnet-4-6": { input: 3, output: 15, cacheRead: 0.3 },
   "claude-haiku-5-5": { input: 0.1, output: 0.5, cacheRead: 0.01 },
   "claude-haiku-4-5": { input: 1, output: 5, cacheRead: 0.1 },
 };
+
+/** LiteLLM's price list, the one ccusage prices from: `model_prices_and_context_window.json`. */
+export const PRICE_LIST_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json";
+
+/** The LiteLLM prices of `models` (by base model), skipping any without input, output and cache-read prices. */
+export function pricesOf(list: unknown, models: Iterable<string>): Record<string, Price> {
+  const out: Record<string, Price> = {};
+  for (const model of models) {
+    const base = baseModel(model);
+    const entry = ((list ?? {}) as Record<string, Record<string, unknown> | undefined>)[base];
+    const [input, output, cacheRead] = [entry?.input_cost_per_token, entry?.output_cost_per_token, entry?.cache_read_input_token_cost].map(num);
+    if (input > 0 && output > 0 && cacheRead > 0) out[base] = { input: input * 1e6, output: output * 1e6, cacheRead: cacheRead * 1e6 };
+  }
+  return out;
+}
+
+/** Live prices from a report win over the built-in table. Module state, as prices are the same for every report. */
+export function addPrices(prices: Record<string, Price>): void {
+  Object.assign(PRICES, prices);
+}
 
 /** `claude-haiku-4-5-20251001` and `claude-opus-5-5[1m]` price as their base model. */
 export function baseModel(model: string): string {

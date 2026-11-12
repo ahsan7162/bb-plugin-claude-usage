@@ -6,14 +6,14 @@ import type { ReactNode } from "react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { definePluginApp, useBbNavigate, useRpc } from "@get-bb/plugin-sdk/app";
 import type { rpcContract, Session } from "./contract";
-import { localDate, projectWindow, RANGES, sinceOf, splitCost, tokensOf, type Part, type Range, type Window } from "./usage";
+import { addPrices, localDate, projectWindow, RANGES, sinceOf, splitCost, tokensOf, type Part, type Price, type Range, type Window } from "./usage";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import "./tokens.css";
 
-type Report = { generatedAt: number; days: { date: string; parts: Part[] }[]; sessions: Session[] };
+type Report = { generatedAt: number; days: { date: string; parts: Part[] }[]; sessions: Session[]; prices: Record<string, Price> };
 type Limits = {
   source: "anthropic" | "bb" | null;
   plan: string | null;
@@ -257,7 +257,10 @@ function useReport(range: Range) {
       let live = true;
       setState((s) => ({ ...s, loading: true, error: null }));
       rpc.call("report", { range, timeZone: TIME_ZONE, refresh }).then(
-        (report) => live && setState({ reportRange: range, report, error: null, loading: false }),
+        (report) => {
+          addPrices(report.prices);
+          if (live) setState({ reportRange: range, report, error: null, loading: false });
+        },
         (cause: unknown) => live && setState((s) => ({ ...s, error: message(cause), loading: false })),
       );
       return () => {
@@ -498,7 +501,10 @@ function useGlance(filter: (parts: Part[]) => Part[]) {
     let live = true;
     const load = () =>
       Promise.all([rpc.call("report", { range: "today", timeZone: TIME_ZONE, refresh: false }), rpc.call("report", { range: "7d", timeZone: TIME_ZONE, refresh: false })]).then(
-        ([today, week]) => live && setReports({ today, week }),
+        ([today, week]) => {
+          addPrices({ ...today.prices, ...week.prices });
+          if (live) setReports({ today, week });
+        },
         () => undefined,
       );
     void load();

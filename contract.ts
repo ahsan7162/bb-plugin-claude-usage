@@ -43,6 +43,8 @@ export const rpcContract = defineRpcContract({
       generatedAt: z.number(),
       days: z.array(z.object({ date: z.string(), parts: z.array(part) })),
       sessions: z.array(session),
+      /** $ per million tokens by base model, from LiteLLM, for the report's models it knows. */
+      prices: z.record(z.string(), z.object({ input: z.number(), output: z.number(), cacheRead: z.number() })),
     }),
   },
   /** Claude plan limits: Anthropic first, bb's provider-usage as the fallback, plus ccusage's live burn rate. */
