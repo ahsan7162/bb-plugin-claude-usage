@@ -3,15 +3,13 @@
 
 https://github.com/user-attachments/assets/1910b8e1-5d95-496b-bc28-e93370647904
 
-<!-- IMAGE: drag 01-limits.png onto this line in GitHub's web editor, then delete this comment -->
+<img width="3200" height="2000" alt="01-limits" src="https://github.com/user-attachments/assets/cc8cfaec-e198-4817-8c97-f1464f82c8ed" />
 
-<!-- IMAGE: drag 02-providers.png onto this line in GitHub's web editor, then delete this comment -->
+<img width="3200" height="2000" alt="02-providers" src="https://github.com/user-attachments/assets/32f8cd94-7f16-4ef6-a2de-26c066264cb2" />
+<img width="3200" height="2000" alt="03-sessions" src="https://github.com/user-attachments/assets/2e41b769-768b-4d35-bd43-1bde53d6bc6b" />
 
-<!-- IMAGE: drag 03-sessions.png onto this line in GitHub's web editor, then delete this comment -->
-
-<!-- IMAGE: drag 04-days.png onto this line in GitHub's web editor, then delete this comment -->
-
-<!-- IMAGE: drag 05-models.png onto this line in GitHub's web editor, then delete this comment -->
+<img width="3200" height="2000" alt="04-days" src="https://github.com/user-attachments/assets/86491664-5963-4ab4-89b6-efbeeb165fbc" />
+<img width="3200" height="2000" alt="05-models" src="https://github.com/user-attachments/assets/5c78cd4e-b25f-4df1-857c-40208b7ee5af" />
 
 A **Usage Explorer** page in bb: AI coding usage by session, day and model, plus Claude
 plan limits with the pace you are spending them at.
