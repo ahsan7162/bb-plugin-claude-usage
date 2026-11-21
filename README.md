@@ -9,7 +9,9 @@ https://github.com/user-attachments/assets/1910b8e1-5d95-496b-bc28-e93370647904
 
 <!-- IMAGE: drag 03-sessions.png onto this line in GitHub's web editor, then delete this comment -->
 
-<!-- IMAGE: drag 04-models.png onto this line in GitHub's web editor, then delete this comment -->
+<!-- IMAGE: drag 04-days.png onto this line in GitHub's web editor, then delete this comment -->
+
+<!-- IMAGE: drag 05-models.png onto this line in GitHub's web editor, then delete this comment -->
 
 A **Usage Explorer** page in bb: AI coding usage by session, day and model, plus Claude
 plan limits with the pace you are spending them at.
