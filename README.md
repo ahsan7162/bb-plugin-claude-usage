@@ -1,18 +1,15 @@
 
 # Usage Explorer (bb-plugin-claude-usage)
 
-
 https://github.com/user-attachments/assets/1910b8e1-5d95-496b-bc28-e93370647904
 
+<!-- IMAGE: drag 01-limits.png onto this line in GitHub's web editor, then delete this comment -->
 
+<!-- IMAGE: drag 02-providers.png onto this line in GitHub's web editor, then delete this comment -->
 
-<img width="2720" height="1800" alt="all-clear" src="https://github.com/user-attachments/assets/13ab5eba-d338-44aa-a640-2c7c403f12d3" />
-<img width="2720" height="1800" alt="models" src="https://github.com/user-attachments/assets/44e27181-5fb7-4418-81a5-f76f324afea4" />
-<img width="2720" height="1800" alt="providers" src="https://github.com/user-attachments/assets/937285fd-c7d9-404d-9051-a8962c5da507" />
-<img width="2720" height="1800" alt="sessions" src="https://github.com/user-attachments/assets/ead46897-c7bf-4974-b58e-120652340452" />
+<!-- IMAGE: drag 03-sessions.png onto this line in GitHub's web editor, then delete this comment -->
 
-
-
+<!-- IMAGE: drag 04-models.png onto this line in GitHub's web editor, then delete this comment -->
 
 A **Usage Explorer** page in bb: AI coding usage by session, day and model, plus Claude
 plan limits with the pace you are spending them at.
